@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Private Media Downloader</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-badge" aria-hidden="true">DL</span>
+        <div>
+          <h1>Private Media Downloader</h1>
+          <p class="subtitle">Paste a permitted media link, pick MP3 or MP4, and save directly to your PC.</p>
+        </div>
+      </div>
+      <span class="pill">Localhost • $0</span>
+    </header>
+
+    <section class="card downloader-card" aria-label="Media link fetcher and converter">
+      <form id="inspect-form" class="url-form" novalidate>
+        <div class="input-wrap">
+          <input
+            id="url-input"
+            type="url"
+            placeholder="Paste a media URL (e.g. https://www.youtube.com/watch?v=...)"
+            autocomplete="off"
+            autofocus
+            required
+            aria-label="Media URL"
+          />
+          <button id="clear-url-btn" type="button" class="icon-clear" title="Clear link" aria-label="Clear link" hidden>&times;</button>
+        </div>
+        <button id="fetch-btn" type="submit" class="btn btn-secondary">Fetch</button>
+      </form>
+
+      <div id="error-banner" class="alert alert-error" role="alert" hidden>
+        <span id="error-text"></span>
+        <button id="error-close" type="button" class="alert-close" aria-label="Dismiss error">&times;</button>
+      </div>
+
+      <div id="preview-card" class="preview-card" hidden>
+        <div class="media-summary">
+          <div class="thumb-box">
+            <img id="thumb-img" referrerpolicy="no-referrer" alt="Media thumbnail" hidden />
+            <svg id="thumb-fallback" viewBox="0 0 160 90" class="thumb-svg" aria-hidden="true">
+              <rect width="160" height="90" rx="8" fill="currentColor" opacity="0.1" />
+              <circle cx="80" cy="45" r="20" fill="currentColor" opacity="0.18" />
+              <polygon points="74,35 74,55 92,45" fill="currentColor" />
+            </svg>
+          </div>
+          <div class="media-info">
+            <h2 id="media-title" class="media-title"></h2>
+            <p id="media-meta" class="media-meta"></p>
+            <p id="playlist-note" class="playlist-note" hidden>
+              Playlist link detected — only this single video/track will be downloaded.
+            </p>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <div class="format-group" role="group" aria-label="Output format">
+            <button id="format-mp3" type="button" class="seg-btn active" aria-pressed="true">MP3 (Audio)</button>
+            <button id="format-mp4" type="button" class="seg-btn" aria-pressed="false">MP4 (Video)</button>
+          </div>
+
+          <div class="quality-wrap">
+            <label for="quality-select" id="quality-label">Quality</label>
+            <select id="quality-select"></select>
+          </div>
+        </div>
+
+        <p id="hd-codec-hint" class="codec-hint" hidden>
+          1440p / 4K downloads quickly via remux (uses VP9/AV1 if H.264 isn't available; VLC recommended if needed).
+        </p>
+
+        <div class="progress-section">
+          <div class="progress-header">
+            <span id="status-text" class="status-text">Ready to download</span>
+            <span id="percent-text" class="percent-text"></span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+            <div id="progress-bar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button id="download-btn" type="button" class="btn btn-primary">Download MP3</button>
+          <button id="cancel-btn" type="button" class="btn btn-danger-ghost" hidden>Cancel</button>
+          <button id="download-another-btn" type="button" class="btn btn-secondary" hidden>Download another</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="history-section" class="card history-card" aria-label="Session downloads">
+      <div class="history-header">
+        <h2>Recent Downloads (this session)</h2>
+        <span id="history-count" class="history-count">0</span>
+      </div>
+      <p id="history-empty" class="history-empty">
+        Downloaded MP3 and MP4 files save straight to your browser Downloads folder and appear here so you can quickly grab your next link.
+      </p>
+      <ul id="history-list" class="history-list"></ul>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
