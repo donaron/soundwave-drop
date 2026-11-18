@@ -1,0 +1,20 @@
+[project]
+name = "media-downloader"
+version = "0.1.0"
+description = "Private local MP3/MP4 web downloader"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "yt-dlp>=2025.1.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.0",
+  "httpx>=0.28.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
