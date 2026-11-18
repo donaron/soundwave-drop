@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 STANDARD_MP4_HEIGHTS: tuple[int, ...] = (2160, 1440, 1080, 720, 480, 360)
 MP3_BITRATES: tuple[int, ...] = (320, 192, 128)
 TERMINAL_STATUSES = frozenset({"ready", "error", "cancelled"})
+PLAYLIST_TYPES = frozenset({"playlist", "multi_video"})
 
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -89,7 +90,7 @@ def inspect_media(
     except Exception as exc:
         raise MediaInspectError(502, f"Unable to inspect media link: {exc}") from exc
 
-    if not info or info.get("_type") == "playlist":
+    if not info or info.get("_type") in PLAYLIST_TYPES:
         raise MediaInspectError(
             422,
             "Please paste a single video or track link — playlists and channels aren't supported.",
@@ -397,7 +398,23 @@ class JobManager:
             job_dir.mkdir(parents=True, exist_ok=True)
             opts = build_ydl_options(job.fmt, job.quality, job_dir, ffmpeg_dir)
 
+            stream_index = 0
+            highest_progress = 1.0
+            last_emit_progress = 1.0
+            last_emit_time = 0.0
+
+            def reject_playlists(info_dict: dict[str, Any], incomplete: bool = False) -> None:
+                if info_dict.get("_type") in PLAYLIST_TYPES or (
+                    incomplete and "playlist_id" in info_dict and "id" not in info_dict
+                ):
+                    raise MediaInspectError(
+                        422,
+                        "Please paste a single video or track link — playlists and channels aren't supported.",
+                    )
+                return None
+
             def on_progress(data: dict[str, Any]) -> None:
+                nonlocal stream_index, highest_progress, last_emit_progress, last_emit_time
                 if self._is_cancelled(job_id):
                     raise DownloadCancelled("Download cancelled by user.")
                 state = data.get("status")
@@ -405,33 +422,77 @@ class JobManager:
                     total = data.get("total_bytes") or data.get("total_bytes_estimate") or 0
                     downloaded = data.get("downloaded_bytes") or 0
                     ratio = min(1.0, max(0.0, downloaded / total)) if total > 0 else 0.0
-                    pct = ratio * 90.0
-                    self._update_job(
-                        job_id,
-                        status="downloading",
-                        progress=pct,
-                        stage_label=f"Downloading stream... {int(round(ratio * 100))}%",
-                    )
+                    pct_int = int(round(ratio * 100))
+                    if job.fmt == "mp4":
+                        if stream_index == 0:
+                            mapped = ratio * 75.0
+                            label = f"Downloading video stream... {pct_int}%"
+                        else:
+                            mapped = 75.0 + (ratio * 15.0)
+                            label = f"Downloading audio stream... {pct_int}%"
+                    else:
+                        mapped = ratio * 90.0
+                        label = f"Downloading stream... {pct_int}%"
+
+                    effective_pct = max(highest_progress, mapped)
+                    now = time.monotonic()
+                    if (
+                        effective_pct >= 90.0
+                        or (effective_pct - last_emit_progress) >= 1.0
+                        or (now - last_emit_time) >= 0.1
+                    ):
+                        highest_progress = effective_pct
+                        last_emit_progress = effective_pct
+                        last_emit_time = now
+                        self._update_job(
+                            job_id,
+                            status="downloading",
+                            progress=effective_pct,
+                            stage_label=label,
+                        )
                 elif state == "finished":
-                    self._update_job(
-                        job_id,
-                        status="converting",
-                        progress=91.0,
-                        stage_label="Download finished, processing file...",
-                    )
+                    if job.fmt == "mp4" and stream_index == 0:
+                        stream_index += 1
+                        effective_pct = max(highest_progress, 75.0)
+                        highest_progress = effective_pct
+                        last_emit_progress = effective_pct
+                        last_emit_time = time.monotonic()
+                        self._update_job(
+                            job_id,
+                            status="downloading",
+                            progress=effective_pct,
+                            stage_label="Video downloaded, fetching audio stream...",
+                        )
+                    else:
+                        effective_pct = max(highest_progress, 91.0)
+                        highest_progress = effective_pct
+                        last_emit_progress = effective_pct
+                        last_emit_time = time.monotonic()
+                        self._update_job(
+                            job_id,
+                            status="converting",
+                            progress=effective_pct,
+                            stage_label="Download finished, processing file...",
+                        )
 
             def on_postprocessor(data: dict[str, Any]) -> None:
+                nonlocal highest_progress, last_emit_progress, last_emit_time
                 if self._is_cancelled(job_id):
                     raise DownloadCancelled("Download cancelled by user.")
                 if data.get("status") == "started":
                     label = "Converting to MP3..." if job.fmt == "mp3" else "Finalizing MP4..."
+                    effective_pct = max(highest_progress, 95.0)
+                    highest_progress = effective_pct
+                    last_emit_progress = effective_pct
+                    last_emit_time = time.monotonic()
                     self._update_job(
                         job_id,
                         status="converting",
-                        progress=95.0,
+                        progress=effective_pct,
                         stage_label=label,
                     )
 
+            opts["match_filter"] = reject_playlists
             opts["progress_hooks"] = [on_progress]
             opts["postprocessor_hooks"] = [on_postprocessor]
 
@@ -443,12 +504,6 @@ class JobManager:
             )
 
             with self._ydl_factory(opts) as ydl:
-                info = ydl.extract_info(job.url, download=False)
-                if not info or info.get("_type") == "playlist":
-                    raise MediaInspectError(
-                        422,
-                        "Please paste a single video or track link — playlists and channels aren't supported.",
-                    )
                 if self._is_cancelled(job_id):
                     raise DownloadCancelled("Download cancelled by user.")
                 ydl.download([job.url])

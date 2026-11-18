@@ -433,3 +433,169 @@ def test_job_manager_startup_purge_and_eviction(tmp_path):
             assert not (base_temp / jid).exists()
     finally:
         manager.shutdown()
+
+
+def test_inspect_media_rejects_multi_video_url():
+    class FakeYDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def extract_info(self, url, download=False):
+            return {"_type": "multi_video", "title": "Multi Video Post", "entries": [{"id": "1"}, {"id": "2"}]}
+
+    with pytest.raises(MediaInspectError) as exc_info:
+        inspect_media(
+            "https://example.com/post/multi",
+            ydl_factory=FakeYDL,
+            url_validator=lambda u: u,
+        )
+    assert exc_info.value.status_code == 422
+
+
+def test_job_manager_single_extraction_and_rejects_multi_video_via_real_ytdlp(tmp_path):
+    ffmpeg_dir = tmp_path / "ffmpeg"
+    ffmpeg_dir.mkdir()
+    call_log = []
+
+    class TrackingYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def extract_info(self, url, download=False):
+            call_log.append(("extract_info", download))
+            return {"_type": "video"}
+
+        def download(self, urls):
+            call_log.append(("download", urls))
+            out_dir = Path(self.opts["outtmpl"]).parent
+            (out_dir / "single.mp3").write_bytes(b"ok")
+
+    manager = JobManager(
+        base_temp_dir=tmp_path / ".temp_jobs",
+        ydl_factory=TrackingYDL,
+        ffmpeg_resolver=lambda: ffmpeg_dir,
+    )
+    try:
+        job = manager.start_job("https://www.youtube.com/watch?v=abc", "mp3", "320")
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            cur = manager.get_job(job.job_id)
+            if cur and cur.status in {"ready", "error"}:
+                break
+            time.sleep(0.01)
+
+        assert cur.status == "ready"
+        # Must NOT run a separate extract_info(download=False) before download()
+        assert call_log == [("download", ["https://www.youtube.com/watch?v=abc"])]
+
+        # Real YoutubeDL match_filter check on multi_video/playlist ie_result
+        import yt_dlp
+
+        captured_opts = []
+
+        class InspectRealYDL(yt_dlp.YoutubeDL):
+            def download(self, url_list):
+                captured_opts.append(self.params.get("match_filter"))
+                return self.process_ie_result(
+                    {"_type": "multi_video", "id": "PL1", "title": "Multi", "entries": []},
+                    download=True,
+                )
+
+        manager2 = JobManager(
+            base_temp_dir=tmp_path / ".temp_jobs_2",
+            ydl_factory=InspectRealYDL,
+            ffmpeg_resolver=lambda: ffmpeg_dir,
+        )
+        try:
+            job2 = manager2.start_job("https://example.com/multi", "mp4", "1080")
+            deadline2 = time.monotonic() + 5.0
+            while time.monotonic() < deadline2:
+                cur2 = manager2.get_job(job2.job_id)
+                if cur2 and cur2.status in {"ready", "error"}:
+                    break
+                time.sleep(0.01)
+            assert cur2.status == "error"
+            assert "playlist" in (cur2.error or "").lower()
+            assert callable(captured_opts[0])
+        finally:
+            manager2.shutdown()
+    finally:
+        manager.shutdown()
+
+
+def test_job_manager_throttles_progress_and_keeps_mp4_multistream_monotonic(tmp_path):
+    ffmpeg_dir = tmp_path / "ffmpeg"
+    ffmpeg_dir.mkdir()
+    release_download = threading.Event()
+
+    class ChunkyMp4YDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def download(self, urls):
+            release_download.wait(timeout=3.0)
+            out_dir = Path(self.opts["outtmpl"]).parent
+            hook = self.opts["progress_hooks"][0]
+            phook = self.opts["postprocessor_hooks"][0]
+
+            # Stream 1: 200 tiny video chunks (rapid fire -> should throttle)
+            for i in range(1, 201):
+                hook({"status": "downloading", "downloaded_bytes": i * 10, "total_bytes": 2000})
+            hook({"status": "finished", "filename": str(out_dir / "video.f137.mp4")})
+
+            # Stream 2: 100 tiny audio chunks (must stay monotonic, never reset to 0%)
+            for i in range(1, 101):
+                hook({"status": "downloading", "downloaded_bytes": i * 10, "total_bytes": 1000})
+            hook({"status": "finished", "filename": str(out_dir / "audio.f140.m4a")})
+
+            phook({"status": "started", "postprocessor": "FFmpegMerger"})
+            (out_dir / "merged.mp4").write_bytes(b"mp4-merged")
+
+    manager = JobManager(
+        base_temp_dir=tmp_path / ".temp_jobs",
+        ydl_factory=ChunkyMp4YDL,
+        ffmpeg_resolver=lambda: ffmpeg_dir,
+    )
+    try:
+        job = manager.start_job("https://www.youtube.com/watch?v=demo", "mp4", "1080")
+        _, q = manager.subscribe(job.job_id)
+        release_download.set()
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            cur = manager.get_job(job.job_id)
+            if cur and cur.status == "ready":
+                break
+            time.sleep(0.01)
+
+        events = []
+        while not q.empty():
+            item = q.get_nowait()
+            if item is not None:
+                events.append(item)
+
+        assert cur.status == "ready"
+        assert len(events) < 120
+        progresses = [e["progress"] for e in events]
+        assert progresses == sorted(progresses)
+        assert progresses[-1] == 100.0
+    finally:
+        manager.shutdown()

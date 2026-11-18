@@ -219,6 +219,113 @@ def test_get_file_streams_with_rfc5987_header_and_blocks_traversal(tmp_path):
         assert client.get(f"/api/jobs/{job_id}/file").status_code == 404
 
 
+def test_get_and_head_file_returns_410_when_expired_and_200_when_ready(tmp_path):
+    ffmpeg_dir = tmp_path / "ffmpeg"
+    ffmpeg_dir.mkdir()
+    fake_now = [1000.0]
+
+    class InstantYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def download(self, urls):
+            out_dir = Path(self.opts["outtmpl"]).parent
+            (out_dir / "track.mp3").write_bytes(b"mp3-bytes")
+
+    manager = JobManager(
+        base_temp_dir=tmp_path / ".temp_jobs",
+        ttl_seconds=30,
+        ydl_factory=InstantYDL,
+        ffmpeg_resolver=lambda: ffmpeg_dir,
+        clock=lambda: fake_now[0],
+    )
+    app = create_app(
+        manager=manager,
+        url_validator=lambda u: validate_public_url(u, resolver=_public_resolver),
+    )
+    with TestClient(app) as client:
+        job_id = client.post(
+            "/api/download",
+            json={"url": "https://www.youtube.com/watch?v=demo", "format": "mp3", "quality": "320"},
+        ).json()["job_id"]
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            cur = manager.get_job(job_id)
+            if cur and cur.status == "ready":
+                break
+            time.sleep(0.01)
+
+        head_ok = client.head(f"/api/jobs/{job_id}/file")
+        assert head_ok.status_code == 200
+
+        fake_now[0] = 2000.0
+        manager.evict_expired()
+
+        head_gone = client.head(f"/api/jobs/{job_id}/file")
+        assert head_gone.status_code == 410
+        get_gone = client.get(f"/api/jobs/{job_id}/file")
+        assert get_gone.status_code == 410
+        assert "expired" in get_gone.json()["detail"].lower()
+
+
+def test_lifespan_runs_periodic_eviction_in_background(tmp_path):
+    ffmpeg_dir = tmp_path / "ffmpeg"
+    ffmpeg_dir.mkdir()
+
+    class InstantYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def download(self, urls):
+            out_dir = Path(self.opts["outtmpl"]).parent
+            (out_dir / "clip.mp4").write_bytes(b"mp4")
+
+    base_temp = tmp_path / ".temp_jobs"
+    manager = JobManager(
+        base_temp_dir=base_temp,
+        ttl_seconds=0.02,
+        ydl_factory=InstantYDL,
+        ffmpeg_resolver=lambda: ffmpeg_dir,
+    )
+    app = create_app(
+        manager=manager,
+        url_validator=lambda u: validate_public_url(u, resolver=_public_resolver),
+        cleanup_interval_seconds=0.05,
+    )
+    with TestClient(app) as client:
+        job_id = client.post(
+            "/api/download",
+            json={"url": "https://www.youtube.com/watch?v=demo", "format": "mp4", "quality": "720"},
+        ).json()["job_id"]
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            cur = manager.get_job(job_id)
+            if cur and cur.status in {"ready", "expired"}:
+                break
+            time.sleep(0.01)
+
+        # Wait without calling start_job or evict_expired manually
+        evict_deadline = time.monotonic() + 2.0
+        while time.monotonic() < evict_deadline and (base_temp / job_id).exists():
+            time.sleep(0.02)
+
+        assert not (base_temp / job_id).exists()
+
+
 def test_cancel_endpoint_marks_job_cancelled(tmp_path):
     ffmpeg_dir = tmp_path / "ffmpeg"
     ffmpeg_dir.mkdir()

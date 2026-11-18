@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 import json
 from pathlib import Path
 from typing import Any, Callable
@@ -50,16 +50,26 @@ def create_app(
     manager: JobManager | None = None,
     inspector: Callable[[str], dict[str, Any]] = inspect_media,
     url_validator: Callable[[str], str] = validate_public_url,
+    cleanup_interval_seconds: float = 60.0,
 ) -> FastAPI:
     """Create and configure the local media downloader FastAPI application."""
     active_manager = manager or JobManager(base_temp_dir=DEFAULT_TEMP_DIR)
 
+    async def _periodic_eviction() -> None:
+        while True:
+            await asyncio.sleep(cleanup_interval_seconds)
+            await run_in_threadpool(active_manager.evict_expired)
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         active_manager.startup_purge()
+        cleanup_task = asyncio.create_task(_periodic_eviction())
         try:
             yield
         finally:
+            cleanup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await cleanup_task
             active_manager.shutdown()
 
     app = FastAPI(title="Private Media Downloader", lifespan=lifespan)
@@ -134,11 +144,16 @@ def create_app(
             },
         )
 
-    @app.get("/api/jobs/{job_id}/file")
+    @app.api_route("/api/jobs/{job_id}/file", methods=["GET", "HEAD"])
     async def download_file(job_id: str) -> FileResponse:
         job = active_manager.get_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="Download job not found.")
+        if job.status == "expired":
+            raise HTTPException(
+                status_code=410,
+                detail="This temporary download has expired and was cleaned up.",
+            )
         if job.status != "ready" or job.file_path is None or job.filename is None:
             raise HTTPException(status_code=409, detail="File is not ready for download.")
 

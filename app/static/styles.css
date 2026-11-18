@@ -492,6 +492,15 @@ select {
   text-decoration: underline;
 }
 
+.history-expired {
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  flex-shrink: 0;
+}
+
 [hidden] {
   display: none !important;
 }

@@ -54,6 +54,8 @@
   let currentFormat = "mp3";
   let activeEventSource = null;
   let activeJobId = null;
+  let inspectRequestId = 0;
+  let activeInspectController = null;
   let sessionCount = 0;
 
   function showError(message) {
@@ -199,13 +201,43 @@
     saveLink.href = `/api/jobs/${encodeURIComponent(jobId)}/file`;
     saveLink.download = filename || "";
     saveLink.textContent = "Save again";
+    saveLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+      hideError();
+      try {
+        const probe = await fetch(saveLink.href, { method: "HEAD" });
+        if (!probe.ok) {
+          const expiredBadge = document.createElement("span");
+          expiredBadge.className = "history-expired";
+          expiredBadge.textContent = "Expired";
+          saveLink.replaceWith(expiredBadge);
+          showError("This temporary file expired from cache — paste the link again to re-download.");
+          return;
+        }
+        triggerBrowserSave(jobId, filename);
+      } catch {
+        showError("Could not reach the local server to re-save this file.");
+      }
+    });
 
     li.appendChild(main);
     li.appendChild(saveLink);
     historyList.prepend(li);
   }
 
+  function setPreviewControlsDisabled(disabled) {
+    btnMp3.disabled = disabled;
+    btnMp4.disabled = disabled;
+    qualitySelect.disabled = disabled;
+    downloadBtn.disabled = disabled;
+  }
+
   function resetForAnother() {
+    inspectRequestId += 1;
+    if (activeInspectController) {
+      activeInspectController.abort();
+      activeInspectController = null;
+    }
     closeActiveStream();
     activeJobId = null;
     inspectedMedia = null;
@@ -216,6 +248,9 @@
     setProgress(0, "Ready to download");
     hideError();
     setBusy(false);
+    urlInput.disabled = false;
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = "Fetch";
     urlInput.focus();
   }
 
@@ -252,18 +287,30 @@
     hideError();
     closeActiveStream();
     activeJobId = null;
+    if (activeInspectController) {
+      activeInspectController.abort();
+    }
+    inspectRequestId += 1;
+    const requestId = inspectRequestId;
+    const controller = new AbortController();
+    activeInspectController = controller;
+
     downloadAnotherBtn.hidden = true;
     fetchBtn.disabled = true;
     fetchBtn.textContent = "Fetching...";
     urlInput.disabled = true;
+    setPreviewControlsDisabled(true);
 
     try {
       const resp = await fetch("/api/inspect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: rawUrl }),
+        signal: controller.signal,
       });
+      if (requestId !== inspectRequestId) return;
       const data = await resp.json();
+      if (requestId !== inspectRequestId) return;
       if (!resp.ok) {
         throw new Error(data.detail || "Could not inspect this URL.");
       }
@@ -286,13 +333,20 @@
       setProgress(0, "Choose MP3 or MP4 and click Download");
       previewCard.hidden = false;
     } catch (err) {
+      if (requestId !== inspectRequestId || err.name === "AbortError") {
+        return;
+      }
       previewCard.hidden = true;
       inspectedMedia = null;
       showError(err.message || "Failed to inspect URL.");
     } finally {
-      urlInput.disabled = false;
-      fetchBtn.disabled = false;
-      fetchBtn.textContent = "Fetch";
+      if (requestId === inspectRequestId) {
+        activeInspectController = null;
+        urlInput.disabled = false;
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = "Fetch";
+        setPreviewControlsDisabled(false);
+      }
     }
   });
 

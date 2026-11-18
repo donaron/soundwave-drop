@@ -29,3 +29,18 @@ def test_root_serves_ui_with_expected_controls(tmp_path):
         css_resp = client.get("/static/styles.css")
         assert css_resp.status_code == 200
         assert "text/css" in css_resp.headers["content-type"].lower()
+
+
+def test_frontend_inspect_abort_and_expired_save_again_behavior():
+    import shutil
+    import subprocess
+
+    node_bin = shutil.which("node")
+    assert node_bin is not None
+    proc = subprocess.run(
+        [node_bin, "tests/test_frontend_behavior.mjs"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
