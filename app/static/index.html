@@ -7,21 +7,37 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
+  <div class="ambient-bg" aria-hidden="true"></div>
+
   <main class="shell">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-badge" aria-hidden="true">DL</span>
+        <span class="brand-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+        </span>
         <div>
           <h1>Private Media Downloader</h1>
-          <p class="subtitle">Paste a permitted media link, pick MP3 or MP4, and save directly to your PC.</p>
+          <p class="subtitle">Ad-free local studio — paste a permitted link, pick MP3 or MP4, and save directly.</p>
         </div>
       </div>
-      <span class="pill">Localhost • $0</span>
+      <div class="topbar-badges">
+        <span class="pill pill-live"><span class="live-dot" aria-hidden="true"></span>Localhost • $0</span>
+      </div>
     </header>
 
     <section class="card downloader-card" aria-label="Media link fetcher and converter">
       <form id="inspect-form" class="url-form" novalidate>
         <div class="input-wrap">
+          <span class="input-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </span>
           <input
             id="url-input"
             type="url"
@@ -33,7 +49,7 @@
           />
           <button id="clear-url-btn" type="button" class="icon-clear" title="Clear link" aria-label="Clear link" hidden>&times;</button>
         </div>
-        <button id="fetch-btn" type="submit" class="btn btn-secondary">Fetch</button>
+        <button id="fetch-btn" type="submit" class="btn btn-accent-soft">Fetch</button>
       </form>
 
       <div id="error-banner" class="alert alert-error" role="alert" hidden>
@@ -47,7 +63,7 @@
             <img id="thumb-img" referrerpolicy="no-referrer" alt="Media thumbnail" hidden />
             <svg id="thumb-fallback" viewBox="0 0 160 90" class="thumb-svg" aria-hidden="true">
               <rect width="160" height="90" rx="8" fill="currentColor" opacity="0.1" />
-              <circle cx="80" cy="45" r="20" fill="currentColor" opacity="0.18" />
+              <circle cx="80" cy="45" r="20" fill="currentColor" opacity="0.2" />
               <polygon points="74,35 74,55 92,45" fill="currentColor" />
             </svg>
           </div>
