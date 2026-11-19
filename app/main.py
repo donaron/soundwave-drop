@@ -72,7 +72,7 @@ def create_app(
                 await cleanup_task
             active_manager.shutdown()
 
-    app = FastAPI(title="Private Media Downloader", lifespan=lifespan)
+    app = FastAPI(title="Soundwave Drop", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR), check_dir=False), name="static")
 
     @app.get("/", response_model=None)

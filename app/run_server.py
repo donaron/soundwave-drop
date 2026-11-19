@@ -45,7 +45,7 @@ def _open_browser_when_ready(host: str, port: int) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     """Launch the private media downloader server on 127.0.0.1."""
-    parser = argparse.ArgumentParser(description="Run Private Media Downloader locally.")
+    parser = argparse.ArgumentParser(description="Run Soundwave Drop locally.")
     parser.add_argument("--port", type=int, default=None, help="Specific loopback port")
     parser.add_argument("--no-browser", action="store_true", help="Do not auto-open browser")
     args = parser.parse_args(argv)
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         port = find_available_port(host=host, preferred=8000, max_tries=11)
 
-    print(f"Private Media Downloader running at http://{host}:{port}")
+    print(f"Soundwave Drop running at http://{host}:{port}")
     if not args.no_browser:
         threading.Thread(
             target=_open_browser_when_ready,

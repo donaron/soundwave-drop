@@ -20,8 +20,15 @@ def test_root_serves_ui_with_expected_controls(tmp_path):
         assert 'id="download-another-btn"' in html
         assert 'id="history-list"' in html
         assert '<div id="thumb-fallback"' in html
+        assert "<title>Soundwave Drop</title>" in html
+        assert "<h1>Soundwave Drop</h1>" in html
+        assert "/static/favicon.svg" in html
         assert "/static/app.js" in html
         assert "/static/styles.css" in html
+
+        svg_resp = client.get("/static/favicon.svg")
+        assert svg_resp.status_code == 200
+        assert "svg" in svg_resp.headers["content-type"].lower()
 
         js_resp = client.get("/static/app.js")
         assert js_resp.status_code == 200

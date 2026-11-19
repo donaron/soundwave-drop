@@ -1,4 +1,4 @@
-# Private Local MP3/MP4 Media Downloader
+# Soundwave Drop
 
 A private, zero-cost localhost web app running on your Windows PC to inspect permitted/personal media links and download MP3 audio or MP4 video without ads or popups.
 
