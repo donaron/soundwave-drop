@@ -79,6 +79,8 @@ def test_has_playlist_context():
 def test_validate_download_request_allowlists():
     assert validate_download_request("MP3", "320") == ("mp3", "320")
     assert validate_download_request("mp4", "2160") == ("mp4", "2160")
+    assert validate_download_request("mp4", "240") == ("mp4", "240")
+    assert validate_download_request("mp4", "144") == ("mp4", "144")
     assert validate_download_request("mp4", "best") == ("mp4", "best")
     with pytest.raises(ValidationError):
         validate_download_request("wav", "320")

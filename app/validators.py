@@ -10,7 +10,7 @@ from typing import Callable
 
 ALLOWED_QUALITIES: dict[str, set[str]] = {
     "mp3": {"320", "192", "128"},
-    "mp4": {"2160", "1440", "1080", "720", "480", "360", "best"},
+    "mp4": {"2160", "1440", "1080", "720", "480", "360", "240", "144", "best"},
 }
 
 _ILLEGAL_FILENAME_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')

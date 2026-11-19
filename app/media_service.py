@@ -22,7 +22,7 @@ from app.validators import has_playlist_context, validate_public_url
 
 logger = logging.getLogger(__name__)
 
-STANDARD_MP4_HEIGHTS: tuple[int, ...] = (2160, 1440, 1080, 720, 480, 360)
+STANDARD_MP4_HEIGHTS: tuple[int, ...] = (2160, 1440, 1080, 720, 480, 360, 240, 144)
 MP3_BITRATES: tuple[int, ...] = (320, 192, 128)
 TERMINAL_STATUSES = frozenset({"ready", "error", "cancelled"})
 PLAYLIST_TYPES = frozenset({"playlist", "multi_video"})
@@ -57,9 +57,11 @@ def _extract_mp4_heights(formats: list[dict[str, Any]] | None) -> list[int | str
     for fmt in formats:
         vcodec = fmt.get("vcodec")
         height = fmt.get("height")
-        if vcodec == "none" or not isinstance(height, int):
+        width = fmt.get("width")
+        if vcodec == "none" or not isinstance(height, int) or height <= 0:
             continue
-        detected.add(height)
+        resolution = min(width, height) if isinstance(width, int) and width > 0 else height
+        detected.add(resolution)
     matched: list[int | str] = [h for h in STANDARD_MP4_HEIGHTS if h in detected]
     return matched if matched else ["best"]
 
@@ -78,6 +80,7 @@ def inspect_media(
     opts: dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
+        "noprogress": True,
         "noplaylist": True,
         "extract_flat": "in_playlist",
         "socket_timeout": 15,
@@ -118,6 +121,7 @@ def build_ydl_options(
     opts: dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
+        "noprogress": True,
         "noplaylist": True,
         "extract_flat": "in_playlist",
         "socket_timeout": 20,
@@ -138,11 +142,10 @@ def build_ydl_options(
         ]
         return opts
 
+    opts["format"] = "bestvideo+bestaudio/best"
     if quality == "best":
-        opts["format"] = "bestvideo+bestaudio/best"
         opts["format_sort"] = ["res", "vcodec:h264", "acodec:m4a"]
     else:
-        opts["format"] = f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best"
         opts["format_sort"] = [f"res:{quality}", "vcodec:h264", "acodec:m4a"]
     opts["merge_output_format"] = "mp4"
     return opts

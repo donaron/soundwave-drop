@@ -195,14 +195,55 @@ def test_build_ydl_options_mp3_and_mp4_resolution_first(tmp_path):
     assert mp3_opts["ffmpeg_location"] == str(ffmpeg_dir)
 
     mp4_1440 = build_ydl_options("mp4", "1440", tmp_path, ffmpeg_dir)
-    assert mp4_1440["format"] == "bestvideo[height<=1440]+bestaudio/best[height<=1440]/best"
+    assert mp4_1440["format"] == "bestvideo+bestaudio/best"
     assert mp4_1440["format_sort"] == ["res:1440", "vcodec:h264", "acodec:m4a"]
     assert mp4_1440["merge_output_format"] == "mp4"
+    assert mp4_1440["noprogress"] is True
 
     mp4_best = build_ydl_options("mp4", "best", tmp_path, ffmpeg_dir)
     assert mp4_best["format"] == "bestvideo+bestaudio/best"
     assert mp4_best["format_sort"] == ["res", "vcodec:h264", "acodec:m4a"]
     assert mp4_best["merge_output_format"] == "mp4"
+
+
+def test_inspect_media_detects_low_res_and_portrait_short_resolutions():
+    class LowResAndPortraitYDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def extract_info(self, url, download=False):
+            if "low" in url:
+                return {
+                    "title": "Low Res Classic",
+                    "duration": 19,
+                    "extractor": "youtube",
+                    "formats": [
+                        {"format_id": "160", "width": 192, "height": 144, "vcodec": "avc1"},
+                        {"format_id": "133", "width": 320, "height": 240, "vcodec": "avc1"},
+                    ],
+                }
+            return {
+                "title": "Vertical Short",
+                "duration": 30,
+                "extractor": "youtube",
+                "formats": [
+                    {"format_id": "s480", "width": 480, "height": 854, "vcodec": "avc1"},
+                    {"format_id": "s720", "width": 720, "height": 1280, "vcodec": "avc1"},
+                    {"format_id": "s1080", "width": 1080, "height": 1920, "vcodec": "avc1"},
+                ],
+            }
+
+    low = inspect_media("https://example.com/low", ydl_factory=LowResAndPortraitYDL, url_validator=lambda u: u)
+    assert low["mp4_heights"] == [240, 144]
+
+    short = inspect_media("https://example.com/short", ydl_factory=LowResAndPortraitYDL, url_validator=lambda u: u)
+    assert short["mp4_heights"] == [1080, 720, 480]
 
 
 def test_job_manager_lifecycle_ready_and_file_location(tmp_path):

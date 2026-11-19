@@ -47,6 +47,8 @@
     720: "720p (HD)",
     480: "480p",
     360: "360p",
+    240: "240p",
+    144: "144p",
     best: "Best available",
   };
 
@@ -89,6 +91,7 @@
   function setProgress(pct, label, isReady = false) {
     const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
     progressBar.style.width = `${clamped}%`;
+    progressBar.classList.toggle("is-ready", isReady);
     progressTrack.setAttribute("aria-valuenow", String(Math.round(clamped)));
     percentText.textContent = clamped > 0 ? `${Math.round(clamped)}%` : "";
     statusText.textContent = label;

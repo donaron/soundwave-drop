@@ -405,7 +405,11 @@ select {
   height: 100%;
   width: 0%;
   background: var(--primary);
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.progress-fill.is-ready {
+  background: var(--success);
 }
 
 .action-row {
