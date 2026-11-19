@@ -72,11 +72,13 @@ body {
   position: relative;
   margin: 0;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
-  padding: 2.25rem 1rem 3.5rem;
+  padding: 2rem 1.25rem;
   overflow-x: hidden;
 }
 
@@ -86,18 +88,19 @@ body {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(640px circle at 12% 8%, var(--aura-1), transparent 60%),
-    radial-gradient(560px circle at 88% 12%, var(--aura-2), transparent 58%);
+    radial-gradient(680px circle at 12% 14%, var(--aura-1), transparent 60%),
+    radial-gradient(620px circle at 88% 84%, var(--aura-2), transparent 60%);
 }
 
 .shell {
   position: relative;
   z-index: 1;
-  max-width: 740px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 840px;
+  margin: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  gap: 1.4rem;
 }
 
 .topbar {
@@ -672,6 +675,28 @@ select {
   border-radius: 9px;
   border: 1px dashed var(--border);
   flex-shrink: 0;
+}
+
+.studio-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.25rem 0.35rem 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.footer-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.footer-sep {
+  opacity: 0.5;
 }
 
 [hidden] {
