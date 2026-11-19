@@ -1,7 +1,7 @@
 # Private Local MP3/MP4 Media Downloader — Design Document
 
 **Date:** 2026-11-18  
-**Target Directory (post-approval):** `C:\Users\USER\.gemini\antigravity\scratch\media-downloader`  
+**Target Directory (post-approval):** `<workspace>/media-downloader`  
 **Chosen Approach:** Option 1 — Local Python (`FastAPI` via `uv`) + native `yt-dlp` + local `ffmpeg` + clean vanilla HTML/CSS/JS web UI
 
 ---
@@ -40,7 +40,7 @@ The user wants to stop using ad-heavy, popup-filled public downloader websites (
 ## 3. Constraints & Environment Reality
 
 - **Operating System:** Windows (verified local environment).
-- **Verified Installed Tools:** `uv` (`C:\Users\USER\.local\bin\uv.exe`), `winget`, `node`/`npm`, and `ffmpeg` (installed via WinGet at `C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe`).
+- **Verified Installed Tools:** `uv`, `winget`, `node`/`npm`, and `ffmpeg` (e.g., installed via WinGet under `%LOCALAPPDATA%\Microsoft\WinGet\Packages\...\bin\ffmpeg.exe`).
 - **Dependency Isolation:** `yt-dlp` is not installed globally and must be managed inside the project's `uv` `.venv` (via `pyproject.toml` / `uv.lock`) alongside `fastapi` and `uvicorn[standard]`.
 - **FFmpeg Discovery:** Server startup resolves `ffmpeg` in order: `FFMPEG_PATH` env var -> `shutil.which("ffmpeg")` -> recursive scan of `%LOCALAPPDATA%\Microsoft\WinGet\Packages` for `ffmpeg.exe`. If still not found, startup or inspect/download returns an explicit, actionable error instead of failing cryptically.
 - **Security & Legal Boundaries:**
