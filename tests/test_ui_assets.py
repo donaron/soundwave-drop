@@ -20,6 +20,10 @@ def test_root_serves_ui_with_expected_controls(tmp_path):
         assert 'id="download-another-btn"' in html
         assert 'id="history-list"' in html
         assert '<div id="thumb-fallback"' in html
+        assert 'id="theme-bar"' in html
+        assert 'id="active-theme-name"' in html
+        import re
+        assert len(re.findall(r'data-theme="[^"]+"', html)) >= 10
         assert "<title>Soundwave Drop</title>" in html
         assert "<h1>Soundwave Drop</h1>" in html
         assert "/static/favicon.svg" in html

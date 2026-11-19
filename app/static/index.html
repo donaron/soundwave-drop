@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Soundwave Drop</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-  <link rel="stylesheet" href="/static/styles.css?v=4" />
+  <link rel="stylesheet" href="/static/styles.css?v=5" />
 </head>
 <body>
   <div class="ambient-bg" aria-hidden="true"></div>
@@ -33,6 +33,25 @@
         <span class="pill pill-live"><span class="live-dot" aria-hidden="true"></span>Localhost • $0</span>
       </div>
     </header>
+
+    <section id="theme-bar" class="theme-bar" aria-label="Color designs">
+      <div class="theme-meta">
+        <span class="theme-label">Color Design:</span>
+        <span id="active-theme-name" class="theme-name">Studio Indigo</span>
+      </div>
+      <div class="theme-swatches" role="group" aria-label="Choose color design">
+        <button type="button" class="theme-swatch active" data-theme="studio-indigo" data-theme-label="Studio Indigo" title="Studio Indigo (Light)" aria-label="Studio Indigo (Light)" aria-pressed="true" style="--swatch: linear-gradient(135deg, #4f46e5 0%, #0891b2 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="midnight-studio" data-theme-label="Midnight Studio" title="Midnight Studio (Dark)" aria-label="Midnight Studio (Dark)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #0f172a 0%, #6366f1 55%, #06b6d4 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="sunset-coral" data-theme-label="Sunset Coral" title="Sunset Coral (Light)" aria-label="Sunset Coral (Light)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #e11d48 0%, #ea580c 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="neon-synthwave" data-theme-label="Neon Synthwave" title="Neon Synthwave (Dark)" aria-label="Neon Synthwave (Dark)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #1e0b36 0%, #ec4899 55%, #8b5cf6 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="emerald-mint" data-theme-label="Emerald Mint" title="Emerald Mint (Light)" aria-label="Emerald Mint (Light)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #0d9488 0%, #059669 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="cyber-forest" data-theme-label="Cyber Forest" title="Cyber Forest (Dark)" aria-label="Cyber Forest (Dark)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #071e1a 0%, #10b981 55%, #06b6d4 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="royal-lavender" data-theme-label="Royal Lavender" title="Royal Lavender (Light)" aria-label="Royal Lavender (Light)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #7c3aed 0%, #db2777 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="obsidian-gold" data-theme-label="Obsidian Gold" title="Obsidian Gold (Dark)" aria-label="Obsidian Gold (Dark)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #1c1917 0%, #f59e0b 55%, #facc15 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="oceanic-breeze" data-theme-label="Oceanic Breeze" title="Oceanic Breeze (Light)" aria-label="Oceanic Breeze (Light)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #0369a1 0%, #38bdf8 100%)"></button>
+        <button type="button" class="theme-swatch" data-theme="crimson-noir" data-theme-label="Crimson Noir" title="Crimson Noir (Dark)" aria-label="Crimson Noir (Dark)" aria-pressed="false" style="--swatch: linear-gradient(135deg, #1a0b10 0%, #e11d48 55%, #fb7185 100%)"></button>
+      </div>
+    </section>
 
     <section class="card downloader-card" aria-label="Media link fetcher and converter">
       <form id="inspect-form" class="url-form" novalidate>
@@ -140,6 +159,6 @@
     </footer>
   </main>
 
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>

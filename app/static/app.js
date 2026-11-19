@@ -33,6 +33,61 @@
   const historyCount = document.getElementById("history-count");
   const historyEmpty = document.getElementById("history-empty");
   const historyList = document.getElementById("history-list");
+  const activeThemeName = document.getElementById("active-theme-name");
+  const themeSwatches = Array.from(document.querySelectorAll(".theme-swatch"));
+
+  const THEME_STORAGE_KEY = "soundwave_theme";
+
+  function applyTheme(themeId, persist = true) {
+    if (!themeId) return;
+    document.documentElement.setAttribute("data-theme", themeId);
+    let matchedLabel = themeId;
+    for (const btn of themeSwatches) {
+      const isSelected = btn.dataset && btn.dataset.theme === themeId;
+      btn.classList.toggle("active", Boolean(isSelected));
+      btn.setAttribute("aria-pressed", String(Boolean(isSelected)));
+      if (isSelected && btn.dataset.themeLabel) {
+        matchedLabel = btn.dataset.themeLabel;
+      }
+    }
+    if (activeThemeName) {
+      activeThemeName.textContent = matchedLabel;
+    }
+    if (persist && typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, themeId);
+      } catch {
+        // Ignore storage restrictions
+      }
+    }
+  }
+
+  for (const btn of themeSwatches) {
+    btn.addEventListener("click", () => {
+      if (btn.dataset && btn.dataset.theme) {
+        applyTheme(btn.dataset.theme, true);
+      }
+    });
+  }
+
+  (() => {
+    let initialTheme = null;
+    if (typeof localStorage !== "undefined") {
+      try {
+        initialTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      } catch {
+        initialTheme = null;
+      }
+    }
+    if (!initialTheme && typeof window !== "undefined" && window.matchMedia) {
+      initialTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "midnight-studio"
+        : "studio-indigo";
+    }
+    if (initialTheme) {
+      applyTheme(initialTheme, false);
+    }
+  })();
 
   const MP3_LABELS = {
     320: "320 kbps (Best)",

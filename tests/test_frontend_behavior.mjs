@@ -120,12 +120,28 @@ function createHarness(fetchImpl) {
     "history-count",
     "history-empty",
     "history-list",
+    "active-theme-name",
   ];
   const elements = new Map(ids.map((id) => [id, makeElement(id)]));
   elements.get("preview-card").hidden = true;
   elements.get("error-banner").hidden = true;
   elements.get("download-another-btn").hidden = true;
   elements.get("cancel-btn").hidden = true;
+
+  const swatches = [
+    Object.assign(makeElement("swatch-1"), {
+      dataset: { theme: "studio-indigo", themeLabel: "Studio Indigo" },
+    }),
+    Object.assign(makeElement("swatch-2"), {
+      dataset: { theme: "obsidian-gold", themeLabel: "Obsidian Gold" },
+    }),
+  ];
+
+  const storage = new Map();
+  const localStorage = {
+    getItem: (k) => (storage.has(k) ? storage.get(k) : null),
+    setItem: (k, v) => storage.set(k, String(v)),
+  };
 
   const eventSources = [];
   class FakeEventSource {
@@ -140,9 +156,14 @@ function createHarness(fetchImpl) {
   }
 
   const document = {
+    documentElement: makeElement("html"),
     body: makeElement("body"),
     getElementById(id) {
       return elements.get(id) || null;
+    },
+    querySelectorAll(selector) {
+      if (selector === ".theme-swatch") return swatches;
+      return [];
     },
     createElement(tag) {
       const el = makeElement();
@@ -153,6 +174,7 @@ function createHarness(fetchImpl) {
 
   const context = {
     document,
+    localStorage,
     fetch: fetchImpl,
     EventSource: FakeEventSource,
     AbortController,
@@ -161,7 +183,7 @@ function createHarness(fetchImpl) {
     console,
   };
   vm.runInNewContext(appJsCode, context);
-  return { elements, eventSources };
+  return { elements, eventSources, document, swatches, localStorage };
 }
 
 // Test 1: Stale in-flight /api/inspect aborted/ignored on resetForAnother()
@@ -270,6 +292,17 @@ function createHarness(fetchImpl) {
   assert.ok(saveLink.replacedBy, "Expired link should be replaced by Expired badge");
   assert.equal(saveLink.replacedBy.textContent, "Expired");
   assert.equal(elements.get("error-banner").hidden, false);
+}
+
+// Test 3: Selecting a color theme updates data-theme, active label, aria-pressed, and localStorage
+{
+  const { elements, document, swatches, localStorage } = createHarness(async () => ({ ok: true, async json() { return {}; } }));
+  swatches[1].click();
+  assert.equal(document.documentElement.getAttribute("data-theme"), "obsidian-gold");
+  assert.equal(elements.get("active-theme-name").textContent, "Obsidian Gold");
+  assert.equal(swatches[1].getAttribute("aria-pressed"), "true");
+  assert.equal(swatches[0].getAttribute("aria-pressed"), "false");
+  assert.equal(localStorage.getItem("soundwave_theme"), "obsidian-gold");
 }
 
 console.log("frontend behavior checks passed");
