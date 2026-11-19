@@ -19,6 +19,7 @@ def test_root_serves_ui_with_expected_controls(tmp_path):
         assert 'id="download-btn"' in html
         assert 'id="download-another-btn"' in html
         assert 'id="history-list"' in html
+        assert '<div id="thumb-fallback"' in html
         assert "/static/app.js" in html
         assert "/static/styles.css" in html
 
